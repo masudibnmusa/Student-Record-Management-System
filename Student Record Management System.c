@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
 
 #define MAX_NAME_LENGTH 50
 #define FILENAME "students.dat"
+#define VERSION "1.0"
 
 // Student structure
 typedef struct Student {
@@ -32,10 +34,20 @@ Student* createStudent(int rollNo, const char* name, float marks);
 void clearInputBuffer();
 void clearScreen();
 void pauseScreen();
+void displayHeader(const char* title);
+void displayFooter();
+void printLine(char ch, int length);
+void displayWelcome();
+void displayExitMessage();
+int getValidChoice(int min, int max);
+int getValidRollNo();
+float getValidMarks();
+char* toLowerStr(char* str);
+int caseInsensitiveSearch(const char* haystack, const char* needle);
 
 int main() {
     clearScreen();
-    printf("=== Student Record Management System ===\n");
+    displayWelcome();
 
     // Load existing data from file
     loadFromFile();
@@ -46,16 +58,7 @@ int main() {
     do {
         clearScreen();
         displayMenu();
-        printf("Enter your choice (1-7): ");
-
-        if (scanf("%d", &choice) != 1) {
-            printf("Invalid input! Please enter a number.\n");
-            clearInputBuffer();
-            pauseScreen();
-            continue;
-        }
-
-        clearInputBuffer(); // Clear the input buffer
+        choice = getValidChoice(1, 7);
 
         switch(choice) {
             case 1:
@@ -90,11 +93,8 @@ int main() {
                 break;
             case 7:
                 clearScreen();
-                printf("Exiting...\n");
+                displayExitMessage();
                 break;
-            default:
-                printf("Invalid choice! Please try again.\n");
-                pauseScreen();
         }
     } while(choice != 7);
 
@@ -114,32 +114,160 @@ void clearScreen() {
 }
 
 void pauseScreen() {
-    printf("\nPress Enter to continue...");
+    printf("\n");
+    printLine('=', 60);
+    printf("Press Enter to continue...");
     getchar();
 }
 
+void printLine(char ch, int length) {
+    int i;
+    for(i = 0; i < length; i++) {
+        printf("%c", ch);
+    }
+    printf("\n");
+}
+
+void displayHeader(const char* title) {
+    printLine('=', 60);
+    printf("   %s\n", title);
+    printLine('=', 60);
+}
+
+void displayFooter() {
+    printLine('=', 60);
+}
+
+void displayWelcome() {
+    printLine('=', 120);
+    printf("\n");
+    printf("%44s%s%44s\n", "", "STUDENT RECORD MANAGEMENT SYSTEM", "");
+    printf("%56s%s%56s\n", "", "Version 3.1", "");
+    printf("\n");
+    printLine('=', 120);
+    printf("\n");
+
+    time_t t = time(NULL);
+    struct tm *tm_info = localtime(&t);
+    printf("  System Date: %02d-%02d-%d\n", tm_info->tm_mday, tm_info->tm_mon + 1, tm_info->tm_year + 1900);
+    printf("  System Time: %02d:%02d:%02d\n", tm_info->tm_hour, tm_info->tm_min, tm_info->tm_sec);
+    printf("\n");
+}
+
+void displayExitMessage() {
+    displayHeader("SYSTEM EXIT");
+    printf("\n");
+    printf("  Thank you for using Student Record Management System!\n");
+    printf("  All changes have been saved successfully.\n");
+    printf("\n");
+    printf("  Developed by: Your Name\n");
+    printf("  Version: %s\n", VERSION);
+    printf("\n");
+    displayFooter();
+}
+
 void displayMenu() {
-    printf("\n=== MENU ===\n");
-    printf("1. Add Student\n");
-    printf("2. Display All Students\n");
-    printf("3. Search Student\n");
-    printf("4. Update Student\n");
-    printf("5. Delete Student\n");
-    printf("6. Save to File\n");
-    printf("7. Exit\n");
-    printf("============\n");
+    displayHeader("                      MAIN MENU");
+    printf("\n");
+    printf("  [1] Add New Student Record\n");
+    printf("  [2] Display All Student Records\n");
+    printf("  [3] Search Student Record\n");
+    printf("  [4] Update Student Record\n");
+    printf("  [5] Delete Student Record\n");
+    printf("  [6] Save Records to File\n");
+    printf("  [7] Exit System\n");
+    printf("\n");
+    displayFooter();
+}
+
+int getValidChoice(int min, int max) {
+    int choice;
+    while(1) {
+        printf("\n  Enter your choice [%d-%d]: ", min, max);
+
+        if (scanf("%d", &choice) != 1) {
+            printf("  [ERROR] Invalid input! Please enter a number.\n");
+            clearInputBuffer();
+            continue;
+        }
+
+        clearInputBuffer();
+
+        if (choice >= min && choice <= max) {
+            return choice;
+        } else {
+            printf("  [ERROR] Invalid choice! Please select between %d and %d.\n", min, max);
+        }
+    }
+}
+
+int getValidRollNo() {
+    int rollNo;
+    while(1) {
+        printf("  Enter Roll Number: ");
+        if (scanf("%d", &rollNo) != 1 || rollNo <= 0) {
+            printf("  [ERROR] Invalid roll number! Must be a positive integer.\n");
+            clearInputBuffer();
+            continue;
+        }
+        clearInputBuffer();
+        return rollNo;
+    }
+}
+
+float getValidMarks() {
+    float marks;
+    while(1) {
+        printf("  Enter Marks (0-100): ");
+        if (scanf("%f", &marks) != 1) {
+            printf("  [ERROR] Invalid marks! Please enter a number.\n");
+            clearInputBuffer();
+            continue;
+        }
+        clearInputBuffer();
+
+        if (marks < 0 || marks > 100) {
+            printf("  [ERROR] Marks must be between 0 and 100!\n");
+            continue;
+        }
+        return marks;
+    }
+}
+
+char* toLowerStr(char* str) {
+    int i;
+    for(i = 0; str[i]; i++) {
+        str[i] = tolower(str[i]);
+    }
+    return str;
+}
+
+int caseInsensitiveSearch(const char* haystack, const char* needle) {
+    char haystackLower[MAX_NAME_LENGTH];
+    char needleLower[MAX_NAME_LENGTH];
+
+    strncpy(haystackLower, haystack, MAX_NAME_LENGTH - 1);
+    haystackLower[MAX_NAME_LENGTH - 1] = '\0';
+
+    strncpy(needleLower, needle, MAX_NAME_LENGTH - 1);
+    needleLower[MAX_NAME_LENGTH - 1] = '\0';
+
+    toLowerStr(haystackLower);
+    toLowerStr(needleLower);
+
+    return strstr(haystackLower, needleLower) != NULL;
 }
 
 Student* createStudent(int rollNo, const char* name, float marks) {
     Student* newStudent = (Student*)malloc(sizeof(Student));
     if (newStudent == NULL) {
-        printf("Memory allocation failed!\n");
+        printf("  [ERROR] Memory allocation failed!\n");
         return NULL;
     }
 
     newStudent->rollNo = rollNo;
     strncpy(newStudent->name, name, MAX_NAME_LENGTH - 1);
-    newStudent->name[MAX_NAME_LENGTH - 1] = '\0'; // Ensure null termination
+    newStudent->name[MAX_NAME_LENGTH - 1] = '\0';
     newStudent->marks = marks;
     newStudent->next = NULL;
 
@@ -151,53 +279,34 @@ void addStudent() {
     char name[MAX_NAME_LENGTH];
     float marks;
 
-    printf("\n=== Add New Student ===\n");
+    displayHeader("ADD NEW STUDENT RECORD");
+    printf("\n");
 
     // Get roll number
-    printf("Enter Roll Number: ");
-    if (scanf("%d", &rollNo) != 1) {
-        printf("Invalid roll number!\n");
-        clearInputBuffer();
-        return;
-    }
-    clearInputBuffer();
+    rollNo = getValidRollNo();
 
     // Check if roll number is unique
     if (!isRollNoUnique(rollNo)) {
-        printf("Error: Roll number %d already exists!\n", rollNo);
+        printf("  [ERROR] Roll number %d already exists!\n", rollNo);
         return;
     }
 
     // Get name
-    printf("Enter Name: ");
+    printf("  Enter Student Name: ");
     if (fgets(name, MAX_NAME_LENGTH, stdin) == NULL) {
-        printf("Error reading name!\n");
+        printf("  [ERROR] Error reading name!\n");
         return;
     }
 
-    // Remove newline character from name
     name[strcspn(name, "\n")] = 0;
 
-    // Validate name (should not be empty)
     if (strlen(name) == 0) {
-        printf("Error: Name cannot be empty!\n");
+        printf("  [ERROR] Name cannot be empty!\n");
         return;
     }
 
     // Get marks
-    printf("Enter Marks: ");
-    if (scanf("%f", &marks) != 1) {
-        printf("Invalid marks!\n");
-        clearInputBuffer();
-        return;
-    }
-    clearInputBuffer();
-
-    // Validate marks
-    if (marks < 0 || marks > 100) {
-        printf("Error: Marks should be between 0 and 100!\n");
-        return;
-    }
+    marks = getValidMarks();
 
     // Create new student
     Student* newStudent = createStudent(rollNo, name, marks);
@@ -205,7 +314,7 @@ void addStudent() {
         return;
     }
 
-    // Add to linked list (insert at beginning for simplicity)
+    // Add to linked list
     if (head == NULL) {
         head = newStudent;
     } else {
@@ -213,73 +322,84 @@ void addStudent() {
         head = newStudent;
     }
 
-    printf("\nStudent added successfully!\n");
+    printf("\n");
+    printf("  [SUCCESS] Student record added successfully!\n");
+    printf("\n");
+    displayFooter();
 }
 
 void displayAllStudents() {
-    printf("\n=== All Students ===\n");
+    int count = 0;
+    Student* current;
+
+    displayHeader("ALL STUDENT RECORDS");
+    printf("\n");
 
     if (head == NULL) {
-        printf("No students found!\n");
+        printf("  [INFO] No student records found in the system.\n");
+        printf("\n");
+        displayFooter();
         return;
     }
 
-    Student* current = head;
-    int count = 0;
+    current = head;
 
-    printf("%-10s %-20s %-10s\n", "Roll No", "Name", "Marks");
-    printf("----------------------------------------\n");
+    printLine('-', 60);
+    printf("  %-10s | %-25s | %-10s\n", "Roll No", "Name", "Marks");
+    printLine('-', 60);
 
     while (current != NULL) {
-        printf("%-10d %-20s %-10.2f\n",
+        printf("  %-10d | %-25s | %-10.2f\n",
                current->rollNo, current->name, current->marks);
         current = current->next;
         count++;
     }
 
-    printf("----------------------------------------\n");
-    printf("Total students: %d\n", count);
+    printLine('-', 60);
+    printf("  Total Records: %d\n", count);
+    printf("\n");
+    displayFooter();
 }
 
 void searchStudent() {
-    if (head == NULL) {
-        printf("No students to search!\n");
-        return;
-    }
-
     int choice;
-    printf("\n=== Search Student ===\n");
-    printf("1. Search by Roll Number\n");
-    printf("2. Search by Name\n");
-    printf("Enter your choice: ");
+    Student* current;
+    int found = 0;
 
-    if (scanf("%d", &choice) != 1) {
-        printf("Invalid choice!\n");
-        clearInputBuffer();
+    displayHeader("SEARCH STUDENT RECORD");
+    printf("\n");
+
+    if (head == NULL) {
+        printf("  [INFO] No student records available to search.\n");
+        printf("\n");
+        displayFooter();
         return;
     }
-    clearInputBuffer();
 
-    Student* current = head;
-    int found = 0;
+    printf("  Search Options:\n");
+    printf("  [1] Search by Roll Number\n");
+    printf("  [2] Search by Name\n");
+    printf("\n");
+
+    choice = getValidChoice(1, 2);
+
+    current = head;
+
+    printf("\n");
 
     switch(choice) {
         case 1: {
-            int rollNo;
-            printf("Enter Roll Number to search: ");
-            if (scanf("%d", &rollNo) != 1) {
-                printf("Invalid roll number!\n");
-                clearInputBuffer();
-                return;
-            }
-            clearInputBuffer();
+            int rollNo = getValidRollNo();
 
             while (current != NULL) {
                 if (current->rollNo == rollNo) {
-                    printf("\nStudent Found:\n");
-                    printf("Roll No: %d\n", current->rollNo);
-                    printf("Name: %s\n", current->name);
-                    printf("Marks: %.2f\n", current->marks);
+                    printLine('-', 60);
+                    printf("  [FOUND] Student Record:\n");
+                    printLine('-', 60);
+                    printf("  Roll Number: %d\n", current->rollNo);
+                    printf("  Name       : %s\n", current->name);
+                    printf("  Marks      : %.2f\n", current->marks);
+                    printLine('-', 60);
                     found = 1;
                     break;
                 }
@@ -289,125 +409,149 @@ void searchStudent() {
         }
         case 2: {
             char searchName[MAX_NAME_LENGTH];
-            printf("Enter Name to search: ");
+            printf("  Enter Name to search: ");
             if (fgets(searchName, MAX_NAME_LENGTH, stdin) == NULL) {
-                printf("Error reading name!\n");
+                printf("  [ERROR] Error reading name!\n");
+                displayFooter();
                 return;
             }
             searchName[strcspn(searchName, "\n")] = 0;
 
-            printf("\nSearch Results:\n");
-            printf("%-10s %-20s %-10s\n", "Roll No", "Name", "Marks");
-            printf("----------------------------------------\n");
+            printLine('-', 60);
+            printf("  %-10s | %-25s | %-10s\n", "Roll No", "Name", "Marks");
+            printLine('-', 60);
 
             while (current != NULL) {
-                if (strstr(current->name, searchName) != NULL) {
-                    printf("%-10d %-20s %-10.2f\n",
+                if (caseInsensitiveSearch(current->name, searchName)) {
+                    printf("  %-10d | %-25s | %-10.2f\n",
                            current->rollNo, current->name, current->marks);
                     found = 1;
                 }
                 current = current->next;
             }
+            printLine('-', 60);
             break;
         }
-        default:
-            printf("Invalid choice!\n");
-            return;
     }
 
     if (!found) {
-        printf("\nNo student found with the given criteria.\n");
+        printf("  [INFO] No matching student record found.\n");
     }
+
+    printf("\n");
+    displayFooter();
 }
 
 void updateStudent() {
-    if (head == NULL) {
-        printf("No students to update!\n");
-        return;
-    }
-
     int rollNo;
-    printf("\n=== Update Student ===\n");
-    printf("Enter Roll Number to update: ");
+    Student* current;
 
-    if (scanf("%d", &rollNo) != 1) {
-        printf("Invalid roll number!\n");
-        clearInputBuffer();
+    displayHeader("UPDATE STUDENT RECORD");
+    printf("\n");
+
+    if (head == NULL) {
+        printf("  [INFO] No student records available to update.\n");
+        printf("\n");
+        displayFooter();
         return;
     }
-    clearInputBuffer();
 
-    Student* current = head;
+    rollNo = getValidRollNo();
+
+    current = head;
     while (current != NULL) {
         if (current->rollNo == rollNo) {
-            printf("\nStudent Found:\n");
-            printf("Current Name: %s\n", current->name);
-            printf("Current Marks: %.2f\n", current->marks);
+            char newName[MAX_NAME_LENGTH];
+            float newMarks;
+
+            printf("\n");
+            printLine('-', 60);
+            printf("  Current Record Details:\n");
+            printLine('-', 60);
+            printf("  Roll Number: %d\n", current->rollNo);
+            printf("  Name       : %s\n", current->name);
+            printf("  Marks      : %.2f\n", current->marks);
+            printLine('-', 60);
+            printf("\n");
 
             // Get new name
-            char newName[MAX_NAME_LENGTH];
-            printf("\nEnter new Name (press enter to keep current): ");
+            printf("  Enter new Name (or press Enter to keep current): ");
             if (fgets(newName, MAX_NAME_LENGTH, stdin) == NULL) {
-                printf("Error reading name!\n");
+                printf("  [ERROR] Error reading name!\n");
+                displayFooter();
                 return;
             }
 
-            // If user entered something, update the name
-            if (strlen(newName) > 1) { // More than just newline
+            if (strlen(newName) > 1) {
                 newName[strcspn(newName, "\n")] = 0;
                 strncpy(current->name, newName, MAX_NAME_LENGTH - 1);
                 current->name[MAX_NAME_LENGTH - 1] = '\0';
             }
 
             // Get new marks
-            printf("Enter new Marks (enter -1 to keep current): ");
-            float newMarks;
+            printf("  Enter new Marks (or enter -1 to keep current): ");
             if (scanf("%f", &newMarks) != 1) {
-                printf("Invalid marks! Keeping current marks.\n");
+                printf("  [INFO] Invalid input. Keeping current marks.\n");
                 clearInputBuffer();
             } else {
                 clearInputBuffer();
                 if (newMarks >= 0 && newMarks <= 100) {
                     current->marks = newMarks;
                 } else if (newMarks != -1) {
-                    printf("Invalid marks range! Keeping current marks.\n");
+                    printf("  [INFO] Invalid marks range. Keeping current marks.\n");
                 }
             }
 
-            printf("\nStudent record updated successfully!\n");
+            printf("\n");
+            printf("  [SUCCESS] Student record updated successfully!\n");
+            printf("\n");
+            displayFooter();
             return;
         }
         current = current->next;
     }
 
-    printf("\nStudent with Roll Number %d not found!\n", rollNo);
+    printf("  [ERROR] Student with Roll Number %d not found!\n", rollNo);
+    printf("\n");
+    displayFooter();
 }
 
 void deleteStudent() {
-    if (head == NULL) {
-        printf("No students to delete!\n");
-        return;
-    }
-
     int rollNo;
-    printf("\n=== Delete Student ===\n");
-    printf("Enter Roll Number to delete: ");
+    Student* current;
+    Student* prev = NULL;
 
-    if (scanf("%d", &rollNo) != 1) {
-        printf("Invalid roll number!\n");
-        clearInputBuffer();
+    displayHeader("DELETE STUDENT RECORD");
+    printf("\n");
+
+    if (head == NULL) {
+        printf("  [INFO] No student records available to delete.\n");
+        printf("\n");
+        displayFooter();
         return;
     }
-    clearInputBuffer();
 
-    Student* current = head;
-    Student* prev = NULL;
+    rollNo = getValidRollNo();
+
+    current = head;
 
     // If head node itself needs to be deleted
     if (current != NULL && current->rollNo == rollNo) {
-        head = current->next;
-        free(current);
-        printf("\nStudent with Roll Number %d deleted successfully!\n", rollNo);
+        char confirm;
+        printf("\n");
+        printf("  [WARNING] Are you sure you want to delete this record? (y/n): ");
+        scanf(" %c", &confirm);
+        clearInputBuffer();
+
+        if (confirm == 'y' || confirm == 'Y') {
+            head = current->next;
+            free(current);
+            printf("  [SUCCESS] Student record deleted successfully!\n");
+        } else {
+            printf("  [INFO] Delete operation cancelled.\n");
+        }
+        printf("\n");
+        displayFooter();
         return;
     }
 
@@ -417,30 +561,54 @@ void deleteStudent() {
         current = current->next;
     }
 
-    // If student was found
     if (current != NULL) {
-        prev->next = current->next;
-        free(current);
-        printf("\nStudent with Roll Number %d deleted successfully!\n", rollNo);
+        char confirm;
+        printf("\n");
+        printf("  [WARNING] Are you sure you want to delete this record? (y/n): ");
+        scanf(" %c", &confirm);
+        clearInputBuffer();
+
+        if (confirm == 'y' || confirm == 'Y') {
+            prev->next = current->next;
+            free(current);
+            printf("  [SUCCESS] Student record deleted successfully!\n");
+        } else {
+            printf("  [INFO] Delete operation cancelled.\n");
+        }
     } else {
-        printf("\nStudent with Roll Number %d not found!\n", rollNo);
+        printf("  [ERROR] Student with Roll Number %d not found!\n", rollNo);
     }
+
+    printf("\n");
+    displayFooter();
 }
 
 void saveToFile() {
-    FILE* file = fopen(FILENAME, "wb");
+    FILE* file;
+    Student* current;
+    int count = 0;
+
+    displayHeader("SAVE RECORDS TO FILE");
+    printf("\n");
+
+    file = fopen(FILENAME, "wb");
     if (file == NULL) {
-        printf("Error opening file for writing!\n");
+        printf("  [ERROR] Unable to open file for writing!\n");
+        printf("\n");
+        displayFooter();
         return;
     }
 
-    Student* current = head;
-    int count = 0;
+    current = head;
+
+    printf("  Saving records to file...\n");
 
     while (current != NULL) {
         if (fwrite(current, sizeof(Student), 1, file) != 1) {
-            printf("Error writing student data!\n");
+            printf("  [ERROR] Error writing student data!\n");
             fclose(file);
+            printf("\n");
+            displayFooter();
             return;
         }
         current = current->next;
@@ -448,32 +616,34 @@ void saveToFile() {
     }
 
     fclose(file);
-    printf("\nData saved to file successfully! (%d records)\n", count);
+    printf("  [SUCCESS] %d record(s) saved to '%s' successfully!\n", count, FILENAME);
+    printf("\n");
+    displayFooter();
 }
 
 void loadFromFile() {
-    FILE* file = fopen(FILENAME, "rb");
-    if (file == NULL) {
-        printf("No existing data file found. Starting with empty records.\n");
-        return;
-    }
-
-    // Clear existing list
-    freeList();
-
+    FILE* file;
     Student temp;
     int count = 0;
 
+    file = fopen(FILENAME, "rb");
+    if (file == NULL) {
+        printf("  [INFO] No existing data file found. Starting fresh.\n");
+        return;
+    }
+
+    freeList();
+
+    printf("  Loading records from file...\n");
+
     while (fread(&temp, sizeof(Student), 1, file) == 1) {
-        // Create a new student with the loaded data
         Student* newStudent = createStudent(temp.rollNo, temp.name, temp.marks);
         if (newStudent == NULL) {
-            printf("Error loading student data!\n");
+            printf("  [ERROR] Error loading student data!\n");
             fclose(file);
             return;
         }
 
-        // Add to linked list
         if (head == NULL) {
             head = newStudent;
         } else {
@@ -484,7 +654,7 @@ void loadFromFile() {
     }
 
     fclose(file);
-    printf("Data loaded from file successfully! (%d records)\n", count);
+    printf("  [SUCCESS] Record(s) loaded successfully!\n");
 }
 
 void freeList() {
@@ -504,11 +674,11 @@ int isRollNoUnique(int rollNo) {
     Student* current = head;
     while (current != NULL) {
         if (current->rollNo == rollNo) {
-            return 0; // Not unique
+            return 0;
         }
         current = current->next;
     }
-    return 1; // Unique
+    return 1;
 }
 
 void clearInputBuffer() {
