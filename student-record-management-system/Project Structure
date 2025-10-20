@@ -1,0 +1,10 @@
+student-record-management-system/
+│
+├── student_management.c     # Main source code
+├── README.md               # Project documentation
+├── LICENSE                 # MIT License
+├── .gitignore             # Git ignore rules
+├── Makefile               # Build automation
+├── COMPILATION.md         # Compilation instructions
+├── FEATURES.md            # Detailed features
+└── CHANGELOG.md           # Version history
