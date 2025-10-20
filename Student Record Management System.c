@@ -5,8 +5,11 @@
 #include <time.h>
 
 #define MAX_NAME_LENGTH 50
+#define MAX_EMAIL_LENGTH 100
+#define MAX_PHONE_LENGTH 20
+#define MAX_DEPT_LENGTH 50
 #define FILENAME "students.dat"
-#define VERSION "1.0"
+#define VERSION "2.0"
 
 // ANSI Color Codes
 #define RESET   "\033[0m"
@@ -47,7 +50,11 @@
 typedef struct Student {
     int rollNo;
     char name[MAX_NAME_LENGTH];
+    char email[MAX_EMAIL_LENGTH];
+    char phone[MAX_PHONE_LENGTH];
+    char department[MAX_DEPT_LENGTH];
     float marks;
+    char grade[3];  // A+, A, B+, etc.
     struct Student* next;
 } Student;
 
@@ -65,7 +72,9 @@ void saveToFile();
 void loadFromFile();
 void freeList();
 int isRollNoUnique(int rollNo);
-Student* createStudent(int rollNo, const char* name, float marks);
+Student* createStudent(int rollNo, const char* name, const char* email,
+                       const char* phone, const char* department, float marks);
+void calculateGrade(Student* student);
 void clearInputBuffer();
 void clearScreen();
 void pauseScreen();
@@ -79,6 +88,8 @@ int getValidRollNo();
 float getValidMarks();
 char* toLowerStr(char* str);
 int caseInsensitiveSearch(const char* haystack, const char* needle);
+int isValidEmail(const char* email);
+int isValidPhone(const char* phone);
 
 int main() {
     clearScreen();
@@ -150,7 +161,7 @@ void clearScreen() {
 
 void pauseScreen() {
     printf("\n");
-    printLine('=', 60, BRIGHT_BLACK);
+    printLine('=', 80, BRIGHT_BLACK);
     printf("%s%sPress Enter to continue...%s", BOLD, YELLOW, RESET);
     getchar();
 }
@@ -165,20 +176,20 @@ void printLine(char ch, int length, const char* color) {
 }
 
 void displayHeader(const char* title, const char* color) {
-    printLine('=', 60, color);
+    printLine('=', 80, color);
     printf("%s%s   %s%s\n", BOLD, color, title, RESET);
-    printLine('=', 60, color);
+    printLine('=', 80, color);
 }
 
 void displayFooter() {
-    printLine('=', 60, BRIGHT_BLACK);
+    printLine('=', 80, BRIGHT_BLACK);
 }
 
 void displayWelcome() {
     printLine('=', 120, BRIGHT_CYAN);
     printf("\n");
     printf("%s%s%44s%s%44s%s\n", BOLD, BRIGHT_MAGENTA, "", "STUDENT RECORD MANAGEMENT SYSTEM", "", RESET);
-    printf("%s%s%56s%s%56s%s\n", BOLD, CYAN, "", "Version 3.1", "", RESET);
+    printf("%s%s%56s%s%56s%s\n", BOLD, CYAN, "", "Version 4.1", "", RESET);
     printf("\n");
     printLine('=', 120, BRIGHT_CYAN);
     printf("\n");
@@ -196,8 +207,8 @@ void displayExitMessage() {
     printf("%s%s  Thank you for using Student Record Management System!%s\n", BOLD, GREEN, RESET);
     printf("%s  All changes have been saved successfully.%s\n", BRIGHT_GREEN, RESET);
     printf("\n");
-    printf("%s  Developed by: Your Name%s\n", CYAN, RESET);
-    printf("%s  Version: %s%s\n", CYAN, VERSION, RESET);
+    printf("%s  Developed by: Masud%s\n", CYAN, RESET);
+    printf("%s  Version 4.1%s\n", CYAN, RESET);
     printf("\n");
     displayFooter();
 }
@@ -270,6 +281,45 @@ float getValidMarks() {
     }
 }
 
+int isValidEmail(const char* email) {
+    int atCount = 0;
+    int dotAfterAt = 0;
+    int i;
+    int len = strlen(email);
+
+    if (len < 5) return 0;  // Minimum email: a@b.c
+
+    for(i = 0; i < len; i++) {
+        if (email[i] == '@') {
+            atCount++;
+            if (i == 0 || i == len - 1) return 0;
+        }
+        if (atCount == 1 && email[i] == '.' && i > 0) {
+            dotAfterAt = 1;
+        }
+    }
+
+    return (atCount == 1 && dotAfterAt);
+}
+
+int isValidPhone(const char* phone) {
+    int i;
+    int len = strlen(phone);
+    int digitCount = 0;
+
+    if (len < 10 || len > 15) return 0;
+
+    for(i = 0; i < len; i++) {
+        if (isdigit(phone[i])) {
+            digitCount++;
+        } else if (phone[i] != '-' && phone[i] != ' ' && phone[i] != '+' && phone[i] != '(' && phone[i] != ')') {
+            return 0;
+        }
+    }
+
+    return (digitCount >= 10);
+}
+
 char* toLowerStr(char* str) {
     int i;
     for(i = 0; str[i]; i++) {
@@ -294,7 +344,36 @@ int caseInsensitiveSearch(const char* haystack, const char* needle) {
     return strstr(haystackLower, needleLower) != NULL;
 }
 
-Student* createStudent(int rollNo, const char* name, float marks) {
+void calculateGrade(Student* student) {
+    float marks = student->marks;
+
+    if (marks >= 90) {
+        strcpy(student->grade, "A+");
+    } else if (marks >= 85) {
+        strcpy(student->grade, "A");
+    } else if (marks >= 80) {
+        strcpy(student->grade, "A-");
+    } else if (marks >= 75) {
+        strcpy(student->grade, "B+");
+    } else if (marks >= 70) {
+        strcpy(student->grade, "B");
+    } else if (marks >= 65) {
+        strcpy(student->grade, "B-");
+    } else if (marks >= 60) {
+        strcpy(student->grade, "C+");
+    } else if (marks >= 55) {
+        strcpy(student->grade, "C");
+    } else if (marks >= 50) {
+        strcpy(student->grade, "C-");
+    } else if (marks >= 45) {
+        strcpy(student->grade, "D");
+    } else {
+        strcpy(student->grade, "F");
+    }
+}
+
+Student* createStudent(int rollNo, const char* name, const char* email,
+                       const char* phone, const char* department, float marks) {
     Student* newStudent = (Student*)malloc(sizeof(Student));
     if (newStudent == NULL) {
         printf("%s%s  [ERROR]%s Memory allocation failed!%s\n", BOLD, RED, RESET, RESET);
@@ -304,7 +383,14 @@ Student* createStudent(int rollNo, const char* name, float marks) {
     newStudent->rollNo = rollNo;
     strncpy(newStudent->name, name, MAX_NAME_LENGTH - 1);
     newStudent->name[MAX_NAME_LENGTH - 1] = '\0';
+    strncpy(newStudent->email, email, MAX_EMAIL_LENGTH - 1);
+    newStudent->email[MAX_EMAIL_LENGTH - 1] = '\0';
+    strncpy(newStudent->phone, phone, MAX_PHONE_LENGTH - 1);
+    newStudent->phone[MAX_PHONE_LENGTH - 1] = '\0';
+    strncpy(newStudent->department, department, MAX_DEPT_LENGTH - 1);
+    newStudent->department[MAX_DEPT_LENGTH - 1] = '\0';
     newStudent->marks = marks;
+    calculateGrade(newStudent);
     newStudent->next = NULL;
 
     return newStudent;
@@ -313,6 +399,9 @@ Student* createStudent(int rollNo, const char* name, float marks) {
 void addStudent() {
     int rollNo;
     char name[MAX_NAME_LENGTH];
+    char email[MAX_EMAIL_LENGTH];
+    char phone[MAX_PHONE_LENGTH];
+    char department[MAX_DEPT_LENGTH];
     float marks;
 
     displayHeader("     ADD NEW STUDENT RECORD", BRIGHT_GREEN);
@@ -333,11 +422,53 @@ void addStudent() {
         printf("%s%s  [ERROR]%s Error reading name!%s\n", BOLD, RED, RESET, RESET);
         return;
     }
-
     name[strcspn(name, "\n")] = 0;
-
     if (strlen(name) == 0) {
         printf("%s%s  [ERROR]%s Name cannot be empty!%s\n", BOLD, RED, RESET, RESET);
+        return;
+    }
+
+    // Get email
+    while(1) {
+        printf("%s  Enter Email: %s", CYAN, RESET);
+        if (fgets(email, MAX_EMAIL_LENGTH, stdin) == NULL) {
+            printf("%s%s  [ERROR]%s Error reading email!%s\n", BOLD, RED, RESET, RESET);
+            return;
+        }
+        email[strcspn(email, "\n")] = 0;
+
+        if (isValidEmail(email)) {
+            break;
+        } else {
+            printf("%s%s  [ERROR]%s Invalid email format! Please try again.%s\n", BOLD, RED, RESET, RESET);
+        }
+    }
+
+    // Get phone
+    while(1) {
+        printf("%s  Enter Phone Number: %s", CYAN, RESET);
+        if (fgets(phone, MAX_PHONE_LENGTH, stdin) == NULL) {
+            printf("%s%s  [ERROR]%s Error reading phone!%s\n", BOLD, RED, RESET, RESET);
+            return;
+        }
+        phone[strcspn(phone, "\n")] = 0;
+
+        if (isValidPhone(phone)) {
+            break;
+        } else {
+            printf("%s%s  [ERROR]%s Invalid phone number! Must be 10-15 digits.%s\n", BOLD, RED, RESET, RESET);
+        }
+    }
+
+    // Get department
+    printf("%s  Enter Department/Class: %s", CYAN, RESET);
+    if (fgets(department, MAX_DEPT_LENGTH, stdin) == NULL) {
+        printf("%s%s  [ERROR]%s Error reading department!%s\n", BOLD, RED, RESET, RESET);
+        return;
+    }
+    department[strcspn(department, "\n")] = 0;
+    if (strlen(department) == 0) {
+        printf("%s%s  [ERROR]%s Department cannot be empty!%s\n", BOLD, RED, RESET, RESET);
         return;
     }
 
@@ -345,7 +476,7 @@ void addStudent() {
     marks = getValidMarks();
 
     // Create new student
-    Student* newStudent = createStudent(rollNo, name, marks);
+    Student* newStudent = createStudent(rollNo, name, email, phone, department, marks);
     if (newStudent == NULL) {
         return;
     }
@@ -360,6 +491,7 @@ void addStudent() {
 
     printf("\n");
     printf("%s%s  [SUCCESS]%s Student record added successfully!%s\n", BOLD, GREEN, RESET, RESET);
+    printf("%s  Assigned Grade: %s%s%s%s\n", CYAN, BOLD, BRIGHT_GREEN, newStudent->grade, RESET);
     printf("\n");
     displayFooter();
 }
@@ -380,20 +512,25 @@ void displayAllStudents() {
 
     current = head;
 
-    printLine('-', 60, BRIGHT_MAGENTA);
-    printf("%s%s  %-10s | %-25s | %-10s%s\n", BOLD, CYAN, "Roll No", "Name", "Marks", RESET);
-    printLine('-', 60, BRIGHT_MAGENTA);
+    printLine('-', 140, BRIGHT_MAGENTA);
+    printf("%s%s  %-8s | %-20s | %-25s | %-15s | %-20s | %-6s | %-5s%s\n",
+           BOLD, CYAN, "Roll No", "Name", "Email", "Phone", "Department", "Marks", "Grade", RESET);
+    printLine('-', 140, BRIGHT_MAGENTA);
 
     while (current != NULL) {
-        printf("%s  %-10d%s | %s%-25s%s | %s%-10.2f%s\n",
+        printf("%s  %-8d%s | %s%-20s%s | %s%-25s%s | %s%-15s%s | %s%-20s%s | %s%-6.2f%s | %s%-5s%s\n",
                BRIGHT_YELLOW, current->rollNo, RESET,
                BRIGHT_WHITE, current->name, RESET,
-               BRIGHT_GREEN, current->marks, RESET);
+               BRIGHT_CYAN, current->email, RESET,
+               BRIGHT_BLUE, current->phone, RESET,
+               MAGENTA, current->department, RESET,
+               BRIGHT_GREEN, current->marks, RESET,
+               BOLD, current->grade, RESET);
         current = current->next;
         count++;
     }
 
-    printLine('-', 60, BRIGHT_MAGENTA);
+    printLine('-', 140, BRIGHT_MAGENTA);
     printf("%s%s  Total Records: %d%s\n", BOLD, MAGENTA, count, RESET);
     printf("\n");
     displayFooter();
@@ -417,9 +554,10 @@ void searchStudent() {
     printf("%s  Search Options:%s\n", CYAN, RESET);
     printf("%s%s  [1]%s Search by Roll Number%s\n", BOLD, YELLOW, RESET, RESET);
     printf("%s%s  [2]%s Search by Name%s\n", BOLD, YELLOW, RESET, RESET);
+    printf("%s%s  [3]%s Search by Department%s\n", BOLD, YELLOW, RESET, RESET);
     printf("\n");
 
-    choice = getValidChoice(1, 2);
+    choice = getValidChoice(1, 3);
 
     current = head;
 
@@ -431,13 +569,17 @@ void searchStudent() {
 
             while (current != NULL) {
                 if (current->rollNo == rollNo) {
-                    printLine('-', 60, BRIGHT_GREEN);
+                    printLine('-', 80, BRIGHT_GREEN);
                     printf("%s%s  [FOUND] Student Record:%s\n", BOLD, GREEN, RESET);
-                    printLine('-', 60, BRIGHT_GREEN);
-                    printf("%s  Roll Number:%s %s%d%s\n", CYAN, RESET, BRIGHT_YELLOW, current->rollNo, RESET);
-                    printf("%s  Name       :%s %s%s%s\n", CYAN, RESET, BRIGHT_WHITE, current->name, RESET);
-                    printf("%s  Marks      :%s %s%.2f%s\n", CYAN, RESET, BRIGHT_GREEN, current->marks, RESET);
-                    printLine('-', 60, BRIGHT_GREEN);
+                    printLine('-', 80, BRIGHT_GREEN);
+                    printf("%s  Roll Number :%s %s%d%s\n", CYAN, RESET, BRIGHT_YELLOW, current->rollNo, RESET);
+                    printf("%s  Name        :%s %s%s%s\n", CYAN, RESET, BRIGHT_WHITE, current->name, RESET);
+                    printf("%s  Email       :%s %s%s%s\n", CYAN, RESET, BRIGHT_CYAN, current->email, RESET);
+                    printf("%s  Phone       :%s %s%s%s\n", CYAN, RESET, BRIGHT_BLUE, current->phone, RESET);
+                    printf("%s  Department  :%s %s%s%s\n", CYAN, RESET, MAGENTA, current->department, RESET);
+                    printf("%s  Marks       :%s %s%.2f%s\n", CYAN, RESET, BRIGHT_GREEN, current->marks, RESET);
+                    printf("%s  Grade       :%s %s%s%s%s\n", CYAN, RESET, BOLD, BRIGHT_GREEN, current->grade, RESET);
+                    printLine('-', 80, BRIGHT_GREEN);
                     found = 1;
                     break;
                 }
@@ -455,21 +597,58 @@ void searchStudent() {
             }
             searchName[strcspn(searchName, "\n")] = 0;
 
-            printLine('-', 60, BRIGHT_MAGENTA);
-            printf("%s%s  %-10s | %-25s | %-10s%s\n", BOLD, CYAN, "Roll No", "Name", "Marks", RESET);
-            printLine('-', 60, BRIGHT_MAGENTA);
+            printLine('-', 140, BRIGHT_MAGENTA);
+            printf("%s%s  %-8s | %-20s | %-25s | %-15s | %-20s | %-6s | %-5s%s\n",
+                   BOLD, CYAN, "Roll No", "Name", "Email", "Phone", "Department", "Marks", "Grade", RESET);
+            printLine('-', 140, BRIGHT_MAGENTA);
 
             while (current != NULL) {
                 if (caseInsensitiveSearch(current->name, searchName)) {
-                    printf("%s  %-10d%s | %s%-25s%s | %s%-10.2f%s\n",
+                    printf("%s  %-8d%s | %s%-20s%s | %s%-25s%s | %s%-15s%s | %s%-20s%s | %s%-6.2f%s | %s%-5s%s\n",
                            BRIGHT_YELLOW, current->rollNo, RESET,
                            BRIGHT_WHITE, current->name, RESET,
-                           BRIGHT_GREEN, current->marks, RESET);
+                           BRIGHT_CYAN, current->email, RESET,
+                           BRIGHT_BLUE, current->phone, RESET,
+                           MAGENTA, current->department, RESET,
+                           BRIGHT_GREEN, current->marks, RESET,
+                           BOLD, current->grade, RESET);
                     found = 1;
                 }
                 current = current->next;
             }
-            printLine('-', 60, BRIGHT_MAGENTA);
+            printLine('-', 140, BRIGHT_MAGENTA);
+            break;
+        }
+        case 3: {
+            char searchDept[MAX_DEPT_LENGTH];
+            printf("%s  Enter Department to search: %s", CYAN, RESET);
+            if (fgets(searchDept, MAX_DEPT_LENGTH, stdin) == NULL) {
+                printf("%s%s  [ERROR]%s Error reading department!%s\n", BOLD, RED, RESET, RESET);
+                displayFooter();
+                return;
+            }
+            searchDept[strcspn(searchDept, "\n")] = 0;
+
+            printLine('-', 140, BRIGHT_MAGENTA);
+            printf("%s%s  %-8s | %-20s | %-25s | %-15s | %-20s | %-6s | %-5s%s\n",
+                   BOLD, CYAN, "Roll No", "Name", "Email", "Phone", "Department", "Marks", "Grade", RESET);
+            printLine('-', 140, BRIGHT_MAGENTA);
+
+            while (current != NULL) {
+                if (caseInsensitiveSearch(current->department, searchDept)) {
+                    printf("%s  %-8d%s | %s%-20s%s | %s%-25s%s | %s%-15s%s | %s%-20s%s | %s%-6.2f%s | %s%-5s%s\n",
+                           BRIGHT_YELLOW, current->rollNo, RESET,
+                           BRIGHT_WHITE, current->name, RESET,
+                           BRIGHT_CYAN, current->email, RESET,
+                           BRIGHT_BLUE, current->phone, RESET,
+                           MAGENTA, current->department, RESET,
+                           BRIGHT_GREEN, current->marks, RESET,
+                           BOLD, current->grade, RESET);
+                    found = 1;
+                }
+                current = current->next;
+            }
+            printLine('-', 140, BRIGHT_MAGENTA);
             break;
         }
     }
@@ -501,34 +680,64 @@ void updateStudent() {
     current = head;
     while (current != NULL) {
         if (current->rollNo == rollNo) {
-            char newName[MAX_NAME_LENGTH];
+            char buffer[100];
             float newMarks;
 
             printf("\n");
-            printLine('-', 60, BRIGHT_CYAN);
+            printLine('-', 80, BRIGHT_CYAN);
             printf("%s  Current Record Details:%s\n", CYAN, RESET);
-            printLine('-', 60, BRIGHT_CYAN);
-            printf("%s  Roll Number:%s %s%d%s\n", CYAN, RESET, BRIGHT_YELLOW, current->rollNo, RESET);
-            printf("%s  Name       :%s %s%s%s\n", CYAN, RESET, BRIGHT_WHITE, current->name, RESET);
-            printf("%s  Marks      :%s %s%.2f%s\n", CYAN, RESET, BRIGHT_GREEN, current->marks, RESET);
-            printLine('-', 60, BRIGHT_CYAN);
+            printLine('-', 80, BRIGHT_CYAN);
+            printf("%s  Roll Number :%s %s%d%s\n", CYAN, RESET, BRIGHT_YELLOW, current->rollNo, RESET);
+            printf("%s  Name        :%s %s%s%s\n", CYAN, RESET, BRIGHT_WHITE, current->name, RESET);
+            printf("%s  Email       :%s %s%s%s\n", CYAN, RESET, BRIGHT_CYAN, current->email, RESET);
+            printf("%s  Phone       :%s %s%s%s\n", CYAN, RESET, BRIGHT_BLUE, current->phone, RESET);
+            printf("%s  Department  :%s %s%s%s\n", CYAN, RESET, MAGENTA, current->department, RESET);
+            printf("%s  Marks       :%s %s%.2f%s\n", CYAN, RESET, BRIGHT_GREEN, current->marks, RESET);
+            printf("%s  Grade       :%s %s%s%s%s\n", CYAN, RESET, BOLD, BRIGHT_GREEN, current->grade, RESET);
+            printLine('-', 80, BRIGHT_CYAN);
             printf("\n");
 
-            // Get new name
+            // Update name
             printf("%s  Enter new Name (or press Enter to keep current): %s", CYAN, RESET);
-            if (fgets(newName, MAX_NAME_LENGTH, stdin) == NULL) {
-                printf("%s%s  [ERROR]%s Error reading name!%s\n", BOLD, RED, RESET, RESET);
-                displayFooter();
-                return;
-            }
-
-            if (strlen(newName) > 1) {
-                newName[strcspn(newName, "\n")] = 0;
-                strncpy(current->name, newName, MAX_NAME_LENGTH - 1);
+            if (fgets(buffer, MAX_NAME_LENGTH, stdin) != NULL && strlen(buffer) > 1) {
+                buffer[strcspn(buffer, "\n")] = 0;
+                strncpy(current->name, buffer, MAX_NAME_LENGTH - 1);
                 current->name[MAX_NAME_LENGTH - 1] = '\0';
             }
 
-            // Get new marks
+            // Update email
+            printf("%s  Enter new Email (or press Enter to keep current): %s", CYAN, RESET);
+            if (fgets(buffer, MAX_EMAIL_LENGTH, stdin) != NULL && strlen(buffer) > 1) {
+                buffer[strcspn(buffer, "\n")] = 0;
+                if (isValidEmail(buffer)) {
+                    strncpy(current->email, buffer, MAX_EMAIL_LENGTH - 1);
+                    current->email[MAX_EMAIL_LENGTH - 1] = '\0';
+                } else {
+                    printf("%s%s  [INFO]%s Invalid email format. Keeping current email.%s\n", BOLD, YELLOW, RESET, RESET);
+                }
+            }
+
+            // Update phone
+            printf("%s  Enter new Phone (or press Enter to keep current): %s", CYAN, RESET);
+            if (fgets(buffer, MAX_PHONE_LENGTH, stdin) != NULL && strlen(buffer) > 1) {
+                buffer[strcspn(buffer, "\n")] = 0;
+                if (isValidPhone(buffer)) {
+                    strncpy(current->phone, buffer, MAX_PHONE_LENGTH - 1);
+                    current->phone[MAX_PHONE_LENGTH - 1] = '\0';
+                } else {
+                    printf("%s%s  [INFO]%s Invalid phone format. Keeping current phone.%s\n", BOLD, YELLOW, RESET, RESET);
+                }
+            }
+
+            // Update department
+            printf("%s  Enter new Department (or press Enter to keep current): %s", CYAN, RESET);
+            if (fgets(buffer, MAX_DEPT_LENGTH, stdin) != NULL && strlen(buffer) > 1) {
+                buffer[strcspn(buffer, "\n")] = 0;
+                strncpy(current->department, buffer, MAX_DEPT_LENGTH - 1);
+                current->department[MAX_DEPT_LENGTH - 1] = '\0';
+            }
+
+            // Update marks
             printf("%s  Enter new Marks (or enter -1 to keep current): %s", CYAN, RESET);
             if (scanf("%f", &newMarks) != 1) {
                 printf("%s%s  [INFO]%s Invalid input. Keeping current marks.%s\n", BOLD, YELLOW, RESET, RESET);
@@ -537,6 +746,7 @@ void updateStudent() {
                 clearInputBuffer();
                 if (newMarks >= 0 && newMarks <= 100) {
                     current->marks = newMarks;
+                    calculateGrade(current);
                 } else if (newMarks != -1) {
                     printf("%s%s  [INFO]%s Invalid marks range. Keeping current marks.%s\n", BOLD, YELLOW, RESET, RESET);
                 }
@@ -544,6 +754,7 @@ void updateStudent() {
 
             printf("\n");
             printf("%s%s  [SUCCESS]%s Student record updated successfully!%s\n", BOLD, GREEN, RESET, RESET);
+            printf("%s  Updated Grade: %s%s%s%s\n", CYAN, BOLD, BRIGHT_GREEN, current->grade, RESET);
             printf("\n");
             displayFooter();
             return;
@@ -579,6 +790,9 @@ void deleteStudent() {
     if (current != NULL && current->rollNo == rollNo) {
         char confirm;
         printf("\n");
+        printLine('-', 80, BRIGHT_RED);
+        printf("%s  Student: %s (Roll: %d)%s\n", RED, current->name, current->rollNo, RESET);
+        printLine('-', 80, BRIGHT_RED);
         printf("%s%s  [WARNING]%s Are you sure you want to delete this record? (y/n): %s", BOLD, RED, RESET, RESET);
         scanf(" %c", &confirm);
         clearInputBuffer();
@@ -604,6 +818,9 @@ void deleteStudent() {
     if (current != NULL) {
         char confirm;
         printf("\n");
+        printLine('-', 80, BRIGHT_RED);
+        printf("%s  Student: %s (Roll: %d)%s\n", RED, current->name, current->rollNo, RESET);
+        printLine('-', 80, BRIGHT_RED);
         printf("%s%s  [WARNING]%s Are you sure you want to delete this record? (y/n): %s", BOLD, RED, RESET, RESET);
         scanf(" %c", &confirm);
         clearInputBuffer();
@@ -656,7 +873,7 @@ void saveToFile() {
     }
 
     fclose(file);
-    printf("%s%s  [SUCCESS]%s %d record(s) saved to '%s' successfully!%s\n", BOLD, GREEN, RESET, count, FILENAME, RESET);
+    printf("%s%s  [SUCCESS]%s %d record(s) saved successfully!%s\n", BOLD, GREEN, RESET, count, RESET);
     printf("\n");
     displayFooter();
 }
@@ -677,7 +894,8 @@ void loadFromFile() {
     printf("%s  Loading records from file...%s\n", CYAN, RESET);
 
     while (fread(&temp, sizeof(Student), 1, file) == 1) {
-        Student* newStudent = createStudent(temp.rollNo, temp.name, temp.marks);
+        Student* newStudent = createStudent(temp.rollNo, temp.name, temp.email,
+                                           temp.phone, temp.department, temp.marks);
         if (newStudent == NULL) {
             printf("%s%s  [ERROR]%s Error loading student data!%s\n", BOLD, RED, RESET, RESET);
             fclose(file);
@@ -694,7 +912,7 @@ void loadFromFile() {
     }
 
     fclose(file);
-    printf("%s%s  [SUCCESS]%s Record(s) loaded successfully!%s\n", BOLD, GREEN, RESET, RESET);
+    printf("%s%s  [SUCCESS]%s %d record(s) loaded successfully!%s\n", BOLD, GREEN, RESET, count, RESET);
 }
 
 void freeList() {
