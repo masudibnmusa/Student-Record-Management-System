@@ -1,0 +1,23 @@
+# Compiled files
+*.exe
+*.o
+*.out
+*.bin
+
+# Data files
+*.dat
+students.dat
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Debug files
+*.dSYM/
+debug/
